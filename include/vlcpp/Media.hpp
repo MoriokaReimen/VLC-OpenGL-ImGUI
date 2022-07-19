@@ -35,8 +35,9 @@ namespace VLC
 class MediaEventManager;
 class Instance;
 class MediaList;
+class TrackList;
 
-class Media : public Internal<libvlc_media_t>, private CallbackOwner<4>
+class Media : protected CallbackOwner<4>, public Internal<libvlc_media_t>
 {
 private:
     enum class CallbackIdx : unsigned int
@@ -89,13 +90,114 @@ public:
     static const FromType AsNode = FromType::AsNode;
 #endif
 
+#if LIBVLC_VERSION_INT >= LIBVLC_VERSION(3, 0, 0, 0)
+    enum class ParseFlags
+    {
+        /**
+         * Parse media if it's a local file
+         */
+        Local = libvlc_media_parse_local,
+        /**
+         * Parse media even if it's a network file
+         */
+        Network = libvlc_media_parse_network,
+        /**
+         * Fetch meta and covert art using local resources
+         */
+        FetchLocal = libvlc_media_fetch_local,
+        /**
+         * Fetch meta and covert art using network resources
+         */
+        FetchNetwork = libvlc_media_fetch_network,
+        /**
+         * Interact with the user (via libvlc_dialog_cbs) when preparsing this item
+         * (and not its sub items). Set this flag in order to receive a callback
+         * when the input is asking for credentials.
+         */
+        Interact = libvlc_media_do_interact,
+    };
+
+    enum class ParsedStatus
+    {
+        Skipped = libvlc_media_parsed_status_skipped,
+        Failed = libvlc_media_parsed_status_failed,
+        Done = libvlc_media_parsed_status_done,
+        Timeout = libvlc_media_parsed_status_timeout,
+    };
+
+    enum class Type
+    {
+        Unknown = libvlc_media_type_unknown,
+        File = libvlc_media_type_file,
+        Directory = libvlc_media_type_directory,
+        Disc = libvlc_media_type_disc,
+        Stream = libvlc_media_type_stream,
+        Playlist = libvlc_media_type_playlist,
+    };
+#endif
+
+#if LIBVLC_VERSION_INT >= LIBVLC_VERSION(4, 0, 0, 0)
     /**
      * @brief Media Constructs a libvlc Media instance
      * @param instance  A libvlc instance
      * @param mrl       A path, location, or node name, depending on the 3rd parameter
      * @param type      The type of the 2nd argument. \sa{FromType}
      */
-    Media(Instance& instance, const std::string& mrl, FromType type)
+    Media(const std::string& mrl, FromType type)
+        : Internal{ libvlc_media_release }
+    {
+        InternalPtr ptr = nullptr;
+        switch (type)
+        {
+        case FromLocation:
+            ptr = libvlc_media_new_location( mrl.c_str() );
+            break;
+        case FromPath:
+            ptr = libvlc_media_new_path( mrl.c_str() );
+            break;
+        case AsNode:
+            ptr = libvlc_media_new_as_node( mrl.c_str() );
+            break;
+        default:
+            break;
+        }
+        if ( ptr == nullptr )
+            throw std::runtime_error("Failed to construct a media");
+        m_obj.reset( ptr, libvlc_media_release );
+    }
+
+    /**
+     * Create a media for an already open file descriptor.
+     * The file descriptor shall be open for reading (or reading and writing).
+     *
+     * Regular file descriptors, pipe read descriptors and character device
+     * descriptors (including TTYs) are supported on all platforms.
+     * Block device descriptors are supported where available.
+     * Directory descriptors are supported on systems that provide fdopendir().
+     * Sockets are supported on all platforms where they are file descriptors,
+     * i.e. all except Windows.
+     *
+     * \note This library will <b>not</b> automatically close the file descriptor
+     * under any circumstance. Nevertheless, a file descriptor can usually only be
+     * rendered once in a media player. To render it a second time, the file
+     * descriptor should probably be rewound to the beginning with lseek().
+     *
+     * \param fd open file descriptor
+     * \return the newly created media
+     */
+    Media( int fd)
+        : Internal { libvlc_media_new_fd( fd ),
+                     libvlc_media_release }
+    {
+    }
+#else
+    /**
+     * @brief Media Constructs a libvlc Media instance
+     * @param instance  A libvlc instance
+     * @param mrl       A path, location, or node name, depending on the 3rd parameter
+     * @param type      The type of the 2nd argument. \sa{FromType}
+     */
+    Media(const Instance& instance, const std::string& mrl, FromType type)
         : Internal{ libvlc_media_release }
     {
         InternalPtr ptr = nullptr;
@@ -138,11 +240,12 @@ public:
      * \param fd open file descriptor
      * \return the newly created media
      */
-    Media(Instance& instance, int fd)
+    Media(const Instance& instance, int fd)
         : Internal { libvlc_media_new_fd( getInternalPtr<libvlc_instance_t>( instance ), fd ),
                      libvlc_media_release }
     {
     }
+#endif
 
     /**
      * Get media instance from this media list instance. This action will increase
@@ -195,7 +298,7 @@ public:
      * In particular, the callback should return an error if playback is stopped;
      * if it does not return, then libvlc_media_player_stop() will never return.
      */
-    using ExpectedMediaReadCb = ssize_t(void* opaque, unsigned char* buf, size_t len);
+    using ExpectedMediaReadCb = ptrdiff_t(void* opaque, unsigned char* buf, size_t len);
 
     /**
      * Callback prototype to seek a custom bitstream input media.
@@ -244,9 +347,37 @@ public:
      *
      * \version LibVLC 3.0.0 and later.
      */
-
+#if LIBVLC_VERSION_INT >= LIBVLC_VERSION(4, 0, 0, 0)
     template <typename OpenCb, typename ReadCb, typename SeekCb, typename CloseCb>
-    Media( Instance& instance, OpenCb&& openCb, ReadCb&& readCb, SeekCb&& seekCb, CloseCb&& closeCb )
+    Media( OpenCb&& openCb, ReadCb&& readCb, SeekCb&& seekCb, CloseCb&& closeCb )
+    {
+        static_assert( signature_match_or_nullptr<OpenCb, ExpectedMediaOpenCb>::value, "Mismatched Open callback prototype" );
+        static_assert( signature_match_or_nullptr<SeekCb, ExpectedMediaSeekCb>::value, "Mismatched Seek callback prototype" );
+        static_assert( signature_match_or_nullptr<CloseCb, ExpectedMediaCloseCb>::value, "Mismatched Close callback prototype" );
+        static_assert( signature_match<ReadCb, ExpectedMediaReadCb>::value, "Mismatched Read callback prototype" );
+
+        auto ptr = libvlc_media_new_callbacks(
+            imem::CallbackWrapper<(unsigned int)CallbackIdx::Open, libvlc_media_open_cb>::
+                wrap<imem::GuessBoxingStrategy<OpenCb, imem::BoxingStrategy::Setup>::Strategy>(
+                    *m_callbacks, std::forward<OpenCb>( openCb ) ),
+            imem::CallbackWrapper<(unsigned int)CallbackIdx::Read, libvlc_media_read_cb>::
+                wrap<imem::GuessBoxingStrategy<OpenCb, imem::BoxingStrategy::Unbox>::Strategy>(
+                    *m_callbacks, std::forward<ReadCb>( readCb ) ),
+            imem::CallbackWrapper<(unsigned int)CallbackIdx::Seek, libvlc_media_seek_cb>::
+                wrap<imem::GuessBoxingStrategy<OpenCb, imem::BoxingStrategy::Unbox>::Strategy>(
+                    *m_callbacks, std::forward<SeekCb>( seekCb ) ),
+            imem::CallbackWrapper<(unsigned int)CallbackIdx::Close, libvlc_media_close_cb>::
+                wrap<imem::GuessBoxingStrategy<OpenCb, imem::BoxingStrategy::Cleanup>::Strategy>(
+                    *m_callbacks, std::forward<CloseCb>( closeCb ) ),
+            m_callbacks.get()
+        );
+        if ( ptr == nullptr )
+            throw std::runtime_error( "Failed to create media" );
+        m_obj.reset( ptr, libvlc_media_release );
+    }
+#else
+    template <typename OpenCb, typename ReadCb, typename SeekCb, typename CloseCb>
+    Media( const Instance& instance, OpenCb&& openCb, ReadCb&& readCb, SeekCb&& seekCb, CloseCb&& closeCb )
     {
         static_assert( signature_match_or_nullptr<OpenCb, ExpectedMediaOpenCb>::value, "Mismatched Open callback prototype" );
         static_assert( signature_match_or_nullptr<SeekCb, ExpectedMediaSeekCb>::value, "Mismatched Seek callback prototype" );
@@ -256,23 +387,23 @@ public:
         auto ptr = libvlc_media_new_callbacks( instance,
             imem::CallbackWrapper<(unsigned int)CallbackIdx::Open, libvlc_media_open_cb>::
                 wrap<imem::GuessBoxingStrategy<OpenCb, imem::BoxingStrategy::Setup>::Strategy>(
-                    this, std::forward<OpenCb>( openCb ) ),
+                    *m_callbacks, std::forward<OpenCb>( openCb ) ),
             imem::CallbackWrapper<(unsigned int)CallbackIdx::Read, libvlc_media_read_cb>::
                 wrap<imem::GuessBoxingStrategy<OpenCb, imem::BoxingStrategy::Unbox>::Strategy>(
-                    this, std::forward<ReadCb>( readCb ) ),
+                    *m_callbacks, std::forward<ReadCb>( readCb ) ),
             imem::CallbackWrapper<(unsigned int)CallbackIdx::Seek, libvlc_media_seek_cb>::
                 wrap<imem::GuessBoxingStrategy<OpenCb, imem::BoxingStrategy::Unbox>::Strategy>(
-                    this, std::forward<SeekCb>( seekCb ) ),
+                    *m_callbacks, std::forward<SeekCb>( seekCb ) ),
             imem::CallbackWrapper<(unsigned int)CallbackIdx::Close, libvlc_media_close_cb>::
                 wrap<imem::GuessBoxingStrategy<OpenCb, imem::BoxingStrategy::Cleanup>::Strategy>(
-                    this, std::forward<CloseCb>( closeCb ) ),
-            static_cast<CallbackOwner<NbEvents>*>( this )
+                    *m_callbacks, std::forward<CloseCb>( closeCb ) ),
+            m_callbacks.get()
         );
         if ( ptr == nullptr )
             throw std::runtime_error( "Failed to create media" );
         m_obj.reset( ptr, libvlc_media_release );
     }
-
+#endif
 #endif
 
     explicit Media( Internal::InternalPtr ptr, bool incrementRefCount)
@@ -374,7 +505,7 @@ public:
     /**
      * Read the meta of the media.
      *
-     * If the media has not yet been parsed this will return NULL.
+     * If the media has not yet been parsed this will return an empty string.
      *
      * This methods automatically calls parseAsync() , so after
      * calling it you may receive a libvlc_MediaMetaChanged event. If you
@@ -412,7 +543,17 @@ public:
         libvlc_media_set_meta(*this, e_meta, psz_value.c_str());
     }
 
-
+#if LIBVLC_VERSION_INT >= LIBVLC_VERSION(4, 0, 0, 0)
+    /**
+     * Save the meta previously set
+     *
+     * \return true if the write operation was successful
+     */
+    bool saveMeta(const Instance& instance)
+    {
+        return libvlc_media_save_meta(getInternalPtr<libvlc_instance_t>(instance), *this) != 0;
+    }
+#else
     /**
      * Save the meta previously set
      *
@@ -422,7 +563,9 @@ public:
     {
         return libvlc_media_save_meta(*this) != 0;
     }
+#endif
 
+#if LIBVLC_VERSION_INT < LIBVLC_VERSION(4, 0, 0, 0)
     /**
      * Get current state of media descriptor object. Possible media states
      * are defined in libvlc_structures.c ( libvlc_NothingSpecial=0,
@@ -437,7 +580,7 @@ public:
     {
         return libvlc_media_get_state(*this);
     }
-
+#endif
     /**
      * Get the current statistics about the media
      *
@@ -459,10 +602,10 @@ public:
      */
     MediaEventManager& eventManager()
     {
-        if ( m_eventManager == NULL )
+        if ( m_eventManager == nullptr )
         {
             libvlc_event_manager_t* obj = libvlc_media_event_manager(*this);
-            m_eventManager = std::make_shared<MediaEventManager>( obj );
+            m_eventManager = std::make_shared<MediaEventManager>( obj, *this );
         }
         return *m_eventManager;
     }
@@ -477,6 +620,7 @@ public:
         return libvlc_media_get_duration(*this);
     }
 
+#if LIBVLC_VERSION_INT < LIBVLC_VERSION(3, 0, 0, 0)
     /**
      * Parse a media.
      *
@@ -529,6 +673,94 @@ public:
     {
         return libvlc_media_is_parsed(*this) != 0;
     }
+#elif LIBVLC_VERSION_INT < LIBVLC_VERSION(4, 0, 0, 0)
+    /**
+     * Parse the media asynchronously with options.
+     *
+     * This fetches (local or network) art, meta data and/or tracks information.
+     * This method is the extended version of libvlc_media_parse_async().
+     *
+     * To track when this is over you can listen to libvlc_MediaParsedStatus
+     * event. However if this functions returns an error, you will not receive any
+     * events.
+     *
+     * It uses a flag to specify parse options (see libvlc_media_parse_flag_t). All
+     * these flags can be combined. By default, media is parsed if it's a local
+     * file.
+     *
+     * \see ParsedStatus
+     * \see meta()
+     * \see tracks()
+     * \see parsedStatus
+     * \see ParseFlag
+     *
+     * \return true on success, false otherwise
+     * \param flags parse options
+     * \param timeout maximum time allowed to preparse the media. If -1, the
+     *      default "preparse-timeout" option will be used as a timeout. If 0, it will
+     *      wait indefinitely. If > 0, the timeout will be used (in milliseconds).
+     * \version LibVLC 3.0.0 or later
+     */
+    bool parseWithOptions( ParseFlags flags, int timeout )
+    {
+        return libvlc_media_parse_with_options( *this, static_cast<libvlc_media_parse_flag_t>( flags ), timeout ) == 0;
+    }
+
+    ParsedStatus parsedStatus()
+    {
+        return static_cast<ParsedStatus>( libvlc_media_get_parsed_status( *this ) );
+    }
+
+    void parseStop()
+    {
+        libvlc_media_parse_stop( *this );
+    }
+#else
+    /**
+     * Parse the media asynchronously with options.
+     *
+     * This fetches (local or network) art, meta data and/or tracks information.
+     * This method is the extended version of libvlc_media_parse_async().
+     *
+     * To track when this is over you can listen to libvlc_MediaParsedStatus
+     * event. However if this functions returns an error, you will not receive any
+     * events.
+     *
+     * It uses a flag to specify parse options (see libvlc_media_parse_flag_t). All
+     * these flags can be combined. By default, media is parsed if it's a local
+     * file.
+     *
+     * \see ParsedStatus
+     * \see meta()
+     * \see tracks()
+     * \see parsedStatus
+     * \see ParseFlag
+     *
+     * \return true on success, false otherwise
+     * \param flags parse options
+     * \param timeout maximum time allowed to preparse the media. If -1, the
+     *      default "preparse-timeout" option will be used as a timeout. If 0, it will
+     *      wait indefinitely. If > 0, the timeout will be used (in milliseconds).
+     * \version LibVLC 3.0.0 or later
+     */
+    bool parseRequest( const Instance& instance, ParseFlags flags, int timeout )
+    {
+        return libvlc_media_parse_request( getInternalPtr<libvlc_instance_t>( instance ),
+            *this, static_cast<libvlc_media_parse_flag_t>( flags ), timeout ) == 0;
+    }
+
+    ParsedStatus parsedStatus( const Instance& instance )
+    {
+        return static_cast<ParsedStatus>( getInternalPtr<libvlc_instance_t>( instance ),
+                                        libvlc_media_get_parsed_status( *this ) );
+    }
+
+    void parseStop( const Instance& instance )
+    {
+        libvlc_media_parse_stop( getInternalPtr<libvlc_instance_t>( instance ),
+                                 *this );
+    }
+#endif
 
     /**
      * Sets media descriptor's user_data. user_data is specialized data
@@ -563,6 +795,23 @@ public:
      *
      * \return a vector containing all tracks
      */
+#if LIBVLC_VERSION_INT >= LIBVLC_VERSION(4, 0, 0, 0)
+    std::vector<MediaTrack> tracks( MediaTrack::Type type )
+    {
+        using TrackListPtr = std::unique_ptr<libvlc_media_tracklist_t,
+                                decltype(&libvlc_media_tracklist_delete)>;
+        TrackListPtr trackList{ libvlc_media_get_tracklist( *this,
+                                    static_cast<libvlc_track_type_t>( type ) ),
+                                &libvlc_media_tracklist_delete };
+        if ( trackList == nullptr )
+            return {};
+        auto count = libvlc_media_tracklist_count( trackList.get() );
+        std::vector<MediaTrack> res{};
+        for ( auto i = 0u; i < count; ++i )
+            res.emplace_back( libvlc_media_tracklist_at( trackList.get(), i ) );
+        return res;
+    }
+#elif LIBVLC_VERSION_INT >= LIBVLC_VERSION(3, 0, 0, 0)
     std::vector<MediaTrack> tracks()
     {
         libvlc_media_track_t**  tracks;
@@ -577,6 +826,144 @@ public:
         libvlc_media_tracks_release( tracks, nbTracks );
         return res;
     }
+#endif
+
+    std::shared_ptr<MediaList> subitems()
+    {
+        auto p = libvlc_media_subitems( *this );
+        if ( p == nullptr )
+            return nullptr;
+        return std::make_shared<MediaList>( p );
+    }
+
+#if LIBVLC_VERSION_INT >= LIBVLC_VERSION(3, 0, 0, 0)
+    Type type()
+    {
+        return static_cast<Type>( libvlc_media_get_type( *this ) );
+    }
+
+    /**
+     * Add a slave to the current media.
+     *
+     * A slave is an external input source that may contains an additional subtitle
+     * track (like a .srt) or an additional audio track (like a .ac3).
+     *
+     * \note This function must be called before the media is parsed (via parseWithOptions())
+     *  or before the media is played (via MediaPlayer::play())
+     *
+     * \version LibVLC 3.0.0 and later.
+     *
+     * \param uri Uri of the slave (should contain a valid scheme).
+     * \param type subtitle or audio
+     * \param priority from 0 (low priority) to 4 (high priority)
+     *
+     * \return true on success, false on error.
+     */
+    bool addSlave(MediaSlave::Type type, unsigned priority, std::string const &uri)
+    {
+        return libvlc_media_slaves_add(*this, (libvlc_media_slave_type_t)type, priority, uri.c_str()) == 0;
+    }
+
+    /**
+     * Clear all slaves previously added by addSlave() or
+     * internally.
+     *
+     * \version LibVLC 3.0.0 and later.
+     */
+    void slavesClear()
+    {
+        libvlc_media_slaves_clear(*this);
+    }
+
+    /**
+     * Get a media descriptor's slaves in a vector
+     *
+     * The list will contain slaves parsed by VLC or previously added by
+     * addSlave(). The typical use case of this function is to save
+     * a list of slave in a database for a later use.
+     *
+     * \version LibVLC 3.0.0 and later.
+     *
+     * \see addSlave()
+     *
+     * \return a vector of MediaSlave
+     */
+    std::vector<MediaSlave> slaves() const
+    {
+        libvlc_media_slave_t **list = nullptr;
+
+        auto length = libvlc_media_slaves_get(*this, &list);
+        if (length == 0)
+            return {};
+        auto deletor = [length](libvlc_media_slave_t **p_list) {
+            libvlc_media_slaves_release(p_list, length);
+        };
+        std::unique_ptr<libvlc_media_slave_t*, decltype(deletor)> scope_gard(list, deletor);
+        std::vector<MediaSlave> res(list, list + length);
+        return res;
+    }
+#endif
+#if LIBVLC_VERSION_INT >= LIBVLC_VERSION(4, 0, 0, 0)
+    using ThumbnailRequest = libvlc_media_thumbnail_request_t;
+
+    enum class ThumbnailSeekSpeed
+    {
+        Precise = libvlc_media_thumbnail_seek_precise,
+        Fast = libvlc_media_thumbnail_seek_fast,
+    };
+
+    ThumbnailRequest* thumbnailRequestByTime( const Instance& inst, libvlc_time_t time, ThumbnailSeekSpeed speed,
+                                              uint32_t width, uint32_t height, bool crop,
+                                              Picture::Type type, libvlc_time_t timeout )
+    {
+        return libvlc_media_thumbnail_request_by_time(
+                    getInternalPtr<libvlc_instance_t>( inst ), *this, time,
+                    static_cast<libvlc_thumbnailer_seek_speed_t>( speed ), width,
+                    height, crop, static_cast<libvlc_picture_type_t>( type ), timeout );
+    }
+
+    ThumbnailRequest* thumbnailRequestByPos( const Instance& inst, float pos, ThumbnailSeekSpeed speed,
+                                             uint32_t width, uint32_t height, bool crop,
+                                             Picture::Type type, libvlc_time_t timeout )
+    {
+        return libvlc_media_thumbnail_request_by_pos(
+                    getInternalPtr<libvlc_instance_t>( inst ), *this, pos,
+                    static_cast<libvlc_thumbnailer_seek_speed_t>( speed ), width,
+                    height, crop, static_cast<libvlc_picture_type_t>( type ), timeout );
+    }
+
+    /**
+     * @brief thumbnailCancel cancels a thumbnailing request
+     * @param request An opaque thumbnail request object.
+     *
+     * Cancelling the request will still cause onThumbnailGenerated callback
+     * to be invoked, with nullptr as the picture instance.
+     * If the request is cancelled after its completion, the behavior is undefined.
+     */
+    void thumbnailRequestCancel( ThumbnailRequest* request )
+    {
+        libvlc_media_thumbnail_request_cancel( request );
+    }
+
+    void thumbnailRequestDestroy( ThumbnailRequest* request )
+    {
+        libvlc_media_thumbnail_request_destroy( request );
+    }
+
+    enum class FileStat : uint8_t
+    {
+        Mtime = libvlc_media_filestat_mtime,
+        Size = libvlc_media_filestat_size,
+    };
+
+    std::pair<bool, uint64_t> fileStat( FileStat s )
+    {
+        uint64_t value = 0;
+        auto res = libvlc_media_get_filestat( *this, static_cast<uint8_t>( s ), &value ) == 1;
+        return std::make_pair( res, value );
+    }
+#endif
+
 
 private:
 
@@ -595,6 +982,18 @@ private:
 private:
     std::shared_ptr<MediaEventManager> m_eventManager;
 };
+
+#if LIBVLC_VERSION_INT >= LIBVLC_VERSION(3, 0, 0, 0)
+inline VLC::Media::ParseFlags operator|(Media::ParseFlags l, Media::ParseFlags r)
+{
+#if !defined(_MSC_VER) || _MSC_VER >= 1900
+    using T = typename std::underlying_type<Media::ParseFlags>::type;
+#else
+    using T = std::underlying_type<Media::ParseFlags>::type;
+#endif
+    return static_cast<Media::ParseFlags>( static_cast<T>( l ) | static_cast<T>( r ) );
+}
+#endif
 
 } // namespace VLC
 

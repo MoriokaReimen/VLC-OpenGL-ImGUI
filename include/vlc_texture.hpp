@@ -12,7 +12,7 @@ class VLC_Texture
     VLC::Instance instance_;
     VLC::Media media_;
     VLC::MediaPlayer media_player_;
-    std::unique_ptr<uint8_t> pixels_;
+    std::unique_ptr<BYTE []> pixels_;
     unsigned int texture_id_;
 
 public:

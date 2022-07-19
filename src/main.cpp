@@ -112,10 +112,11 @@ int main(int, char**)
         ImGui::NewFrame();
 
         /* ここになにか書く */
-        ImGui::Begin("Hello");
+        ImGui::Begin("Captured Data", NULL, ImGuiWindowFlags_NoScrollbar);
         vlc.update();
         auto tex_id = vlc.get_texture_id();
-        ImGui::Image((void*)&tex_id, ImVec2{600, 800});
+        auto tex_size = ImGui::GetContentRegionMax();
+        ImGui::Image((void*)(intptr_t)tex_id, tex_size);
         ImGui::End();
 
 
