@@ -1,0 +1,1 @@
+/usr/bin/g++ -g -rdynamic CMakeFiles/sample.dir/src/main.cpp.o CMakeFiles/sample.dir/src/vlc_texture.cpp.o -o sample  -limgui -lstb /usr/lib/x86_64-linux-gnu/libglfw.so.3.3 -lvlc /usr/lib/x86_64-linux-gnu/libGLX.so /usr/lib/x86_64-linux-gnu/libOpenGL.so 

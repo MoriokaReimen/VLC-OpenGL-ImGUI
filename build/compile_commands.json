@@ -1,0 +1,12 @@
+[
+{
+  "directory": "/home/kei/Desktop/temp2/build",
+  "command": "/usr/bin/g++  -I/usr/include/imgui -I/usr/include/stb -I/home/kei/Desktop/temp2/include -g -o CMakeFiles/sample.dir/src/main.cpp.o -c /home/kei/Desktop/temp2/src/main.cpp",
+  "file": "/home/kei/Desktop/temp2/src/main.cpp"
+},
+{
+  "directory": "/home/kei/Desktop/temp2/build",
+  "command": "/usr/bin/g++  -I/usr/include/imgui -I/usr/include/stb -I/home/kei/Desktop/temp2/include -g -o CMakeFiles/sample.dir/src/vlc_texture.cpp.o -c /home/kei/Desktop/temp2/src/vlc_texture.cpp",
+  "file": "/home/kei/Desktop/temp2/src/vlc_texture.cpp"
+}
+]
