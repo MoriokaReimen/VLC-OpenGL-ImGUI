@@ -1,30 +1,48 @@
+/**
+ * @file vlc_texture.cpp
+ * @author MoriokaReimen
+ * @brief VLC Texture class
+ * @version 0.1
+ * @date 2022-07-20
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
 #include "vlc_texture.hpp"
 #include <GL/gl.h>
 
-constexpr unsigned int VIDEO_WIDTH = 1280;
-constexpr unsigned int VIDEO_HEIGHT = 720;
-
-VLC_Texture::VLC_Texture()
+/**
+ * @brief Construct a new vlc texture::vlc texture object
+ * 
+ * @param media_path path/url for media
+ * @param width video width
+ * @param height video height
+ */
+VLC_Texture::VLC_Texture(const std::string &media_path, const unsigned int &width, const unsigned int height)
+    : video_width_(width), video_height_(height)
 {
+    /* Create  */
     char const *vlc_argv[] =
         {
-            "--no-audio", /* skip any audio track */
-            "--no-xlib",  /* tell VLC to not use Xlib */
-            "-vvv",
-            "--file-caching=0",
-            "--network-caching=300",
-            "--live-caching=0",
-            "--sout-mux-caching=0",
-            "--sout-display-delay=0"
+            "--no-audio",            /* skip any audio track */
+            "--no-xlib",             /* tell VLC to not use Xlib */
+            "-vvv",                  /* Maximum verbosity */
+            "--file-caching=0",      /* disable caching */
+            "--network-caching=300", /* disable network caching */
+            "--live-caching=0",      /* disable live caching */
+            "--sout-mux-caching=0",  /* disable stream caching */
+            "--sout-display-delay=0" /* disable display caching */
         };
-    int vlc_argc = sizeof(vlc_argv) / sizeof(*vlc_argv);
+    const int vlc_argc = sizeof(vlc_argv) / sizeof(*vlc_argv);
     instance_ = VLC::Instance(vlc_argc, vlc_argv);
-    std::string path = "v4l2:///dev/video0";
-    media_ = VLC::Media(instance_, path, VLC::Media::FromLocation);
-    media_player_ = VLC::MediaPlayer(media_);
-    media_player_.setVideoFormat("RV24", VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_WIDTH * 3);
-    pixels_ = std::make_unique<BYTE[]>(VIDEO_HEIGHT * VIDEO_WIDTH * 3);
 
+    /* Create media */
+    auto media_ = VLC::Media(instance_, media_path, VLC::Media::FromLocation);
+
+    /* create media player */
+    media_player_ = VLC::MediaPlayer(media_);
+    media_player_.setVideoFormat("RV24", video_width_, video_height_, video_width_ * 3);
+    pixels_ = std::make_unique<BYTE[]>(video_height_ * video_width_ * 3);
     media_player_.setVideoCallbacks(
         [this](void **pbuffer)
         {
@@ -35,33 +53,46 @@ VLC_Texture::VLC_Texture()
         },
         nullptr);
 
-    /* Create Texture */
+    /* Create GL Texture */
     glGenTextures(1, &texture_id_);
     glBindTexture(GL_TEXTURE_2D, texture_id_);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // This is required on WebGL for non power-of-two textures
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Same
-
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, 0);
 
+    /* Start Capturing */
     media_player_.play();
 }
 
+/**
+ * @brief Destroy the vlc texture::vlc texture object
+ *
+ */
 VLC_Texture::~VLC_Texture()
 {
     media_player_.stop();
     glDeleteTextures(1, &texture_id_);
 }
 
+/**
+ * @brief get GL texture id
+ *
+ * @return texture id
+ */
 unsigned int VLC_Texture::get_texture_id() const
 {
     return texture_id_;
 }
 
+/**
+ * @brief update captured texture data
+ *
+ */
 void VLC_Texture::update()
 {
     glBindTexture(GL_TEXTURE_2D, texture_id_);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, VIDEO_WIDTH, VIDEO_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels_.get());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, video_width_, video_height_, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels_.get());
     glBindTexture(GL_TEXTURE_2D, 0);
 }
