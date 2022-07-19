@@ -1,3 +1,0 @@
-/home/kei/Desktop/temp2/build/CMakeFiles/sample.dir
-/home/kei/Desktop/temp2/build/CMakeFiles/edit_cache.dir
-/home/kei/Desktop/temp2/build/CMakeFiles/rebuild_cache.dir
