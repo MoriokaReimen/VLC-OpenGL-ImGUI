@@ -146,9 +146,10 @@ CMakeFiles/sample.dir/src/main.cpp.o: \
  /usr/include/vlc/libvlc_events.h /usr/include/vlc/libvlc_dialog.h \
  /usr/lib/gcc/x86_64-linux-gnu/11/include/stdbool.h \
  /usr/include/vlc/libvlc_vlm.h /usr/include/vlc/deprecated.h \
- /usr/include/c++/11/array /usr/include/c++/11/utility \
- /usr/include/c++/11/bits/stl_relops.h /usr/include/c++/11/cassert \
- /usr/include/c++/11/memory /usr/include/c++/11/bits/stl_uninitialized.h \
+ /usr/include/vlc/libvlc_version.h /usr/include/c++/11/array \
+ /usr/include/c++/11/utility /usr/include/c++/11/bits/stl_relops.h \
+ /usr/include/c++/11/cassert /usr/include/c++/11/memory \
+ /usr/include/c++/11/bits/stl_uninitialized.h \
  /usr/include/c++/11/bits/stl_tempbuf.h \
  /usr/include/c++/11/bits/stl_raw_storage_iter.h \
  /usr/include/c++/11/bits/align.h /usr/include/c++/11/bit \
@@ -172,25 +173,9 @@ CMakeFiles/sample.dir/src/main.cpp.o: \
  /home/kei/Desktop/temp2/include/vlcpp/Internal.hpp \
  /usr/include/c++/11/stdlib.h /usr/include/c++/11/stdexcept \
  /home/kei/Desktop/temp2/include/vlcpp/structures.hpp \
- /usr/include/c++/11/vector /usr/include/c++/11/bits/stl_vector.h \
- /usr/include/c++/11/bits/stl_bvector.h \
- /usr/include/c++/11/bits/vector.tcc \
- /home/kei/Desktop/temp2/include/vlcpp/Equalizer.hpp \
- /home/kei/Desktop/temp2/include/vlcpp/MediaListPlayer.hpp \
+ /home/kei/Desktop/temp2/include/vlcpp/Picture.hpp \
+ /home/kei/Desktop/temp2/include/vlcpp/Dialog.hpp \
  /home/kei/Desktop/temp2/include/vlcpp/MediaDiscoverer.hpp \
- /usr/include/vlc/libvlc_version.h \
- /home/kei/Desktop/temp2/include/vlcpp/Media.hpp \
- /home/kei/Desktop/temp2/include/vlcpp/MediaList.hpp \
- /usr/include/c++/11/mutex /usr/include/c++/11/chrono \
- /usr/include/c++/11/ratio /usr/include/c++/11/limits \
- /usr/include/c++/11/ctime /usr/include/c++/11/bits/parse_numbers.h \
- /usr/include/c++/11/system_error \
- /usr/include/x86_64-linux-gnu/c++/11/bits/error_constants.h \
- /usr/include/c++/11/bits/std_mutex.h \
- /usr/include/c++/11/bits/unique_lock.h \
- /home/kei/Desktop/temp2/include/vlcpp/MediaPlayer.hpp \
- /home/kei/Desktop/temp2/include/vlcpp/MediaLibrary.hpp \
- /home/kei/Desktop/temp2/include/vlcpp/EventManager.hpp \
  /usr/include/c++/11/algorithm /usr/include/c++/11/bits/stl_algo.h \
  /usr/include/c++/11/bits/algorithmfwd.h \
  /usr/include/c++/11/bits/stl_heap.h \
@@ -202,5 +187,23 @@ CMakeFiles/sample.dir/src/main.cpp.o: \
  /usr/include/c++/11/bits/enable_special_members.h \
  /usr/include/c++/11/bits/node_handle.h \
  /usr/include/c++/11/bits/unordered_map.h \
- /usr/include/c++/11/bits/erase_if.h /usr/include/c++/11/cinttypes \
- /usr/include/inttypes.h
+ /usr/include/c++/11/bits/erase_if.h /usr/include/c++/11/vector \
+ /usr/include/c++/11/bits/stl_vector.h \
+ /usr/include/c++/11/bits/stl_bvector.h \
+ /usr/include/c++/11/bits/vector.tcc /usr/include/c++/11/cstring \
+ /home/kei/Desktop/temp2/include/vlcpp/Equalizer.hpp \
+ /home/kei/Desktop/temp2/include/vlcpp/MediaListPlayer.hpp \
+ /home/kei/Desktop/temp2/include/vlcpp/Media.hpp \
+ /home/kei/Desktop/temp2/include/vlcpp/MediaList.hpp \
+ /usr/include/c++/11/mutex /usr/include/c++/11/chrono \
+ /usr/include/c++/11/ratio /usr/include/c++/11/limits \
+ /usr/include/c++/11/ctime /usr/include/c++/11/bits/parse_numbers.h \
+ /usr/include/c++/11/system_error \
+ /usr/include/x86_64-linux-gnu/c++/11/bits/error_constants.h \
+ /usr/include/c++/11/bits/std_mutex.h \
+ /usr/include/c++/11/bits/unique_lock.h \
+ /home/kei/Desktop/temp2/include/vlcpp/RendererDiscoverer.hpp \
+ /home/kei/Desktop/temp2/include/vlcpp/MediaPlayer.hpp \
+ /home/kei/Desktop/temp2/include/vlcpp/MediaLibrary.hpp \
+ /home/kei/Desktop/temp2/include/vlcpp/EventManager.hpp \
+ /usr/include/c++/11/cinttypes /usr/include/inttypes.h
