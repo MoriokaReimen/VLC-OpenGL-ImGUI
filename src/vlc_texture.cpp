@@ -9,6 +9,9 @@
  * 
  */
 #include "vlc_texture.hpp"
+#ifdef WIN32
+#include <glad/glad.h>
+#endif
 #include <GL/gl.h>
 
 /**
@@ -27,18 +30,18 @@ VLC_Texture::VLC_Texture(const std::string &media_path, const unsigned int &widt
             "--no-audio",            /* skip any audio track */
             "--no-xlib",             /* tell VLC to not use Xlib */
             "-vvv",                  /* Maximum verbosity */
-            "--file-caching=0",      /* disable caching */
-            "--network-caching=0", /* disable network caching */
-            "--live-caching=10",      /* disable live caching */
-            "--sout-mux-caching=10",  /* disable stream caching */
-            "--sout-display-delay=10", /* disable display caching */
+            "--file-caching=1",      /* disable caching */
+            "--network-caching=1", /* disable network caching */
+            "--live-caching=1",      /* disable live caching */
+            "--sout-mux-caching=1",  /* disable stream caching */
+            "--sout-display-delay=1", /* disable display caching */
             "--ignore-config",
-            "--clock-jitter=10",
-            "--clock-synchro=10",
+            "--clock-jitter=1",
+            "--clock-synchro=1",
             "--intf=dummy",
-            "#transcode{vcodec=RV24}:smem{no-time-sync},",
-            "--screen-fps=20",
-            "--h264-fps=20"
+            "--dshow-fps=20",
+            "--screen-fps=10",
+            "--h264-fps=10"
         };
     const int vlc_argc = sizeof(vlc_argv) / sizeof(*vlc_argv);
     instance_ = VLC::Instance(vlc_argc, vlc_argv);
