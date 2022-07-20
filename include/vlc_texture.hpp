@@ -33,7 +33,7 @@ class VLC_Texture
     unsigned int video_height_;      /**< Captured video height */
 
 public:
-    VLC_Texture(const std::string& media_path, const unsigned int& width = 1280, const unsigned int height = 720);
+    VLC_Texture(const std::string& media_path, const unsigned int& width = 1280, const unsigned int height = 960);
     ~VLC_Texture();
 
     unsigned int get_texture_id() const;

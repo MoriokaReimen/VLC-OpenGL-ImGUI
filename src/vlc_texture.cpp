@@ -9,6 +9,7 @@
  * 
  */
 #include "vlc_texture.hpp"
+#include <glad/glad.h>
 #include <GL/gl.h>
 
 /**
@@ -28,10 +29,19 @@ VLC_Texture::VLC_Texture(const std::string &media_path, const unsigned int &widt
             "--no-xlib",             /* tell VLC to not use Xlib */
             "-vvv",                  /* Maximum verbosity */
             "--file-caching=0",      /* disable caching */
-            "--network-caching=300", /* disable network caching */
-            "--live-caching=0",      /* disable live caching */
-            "--sout-mux-caching=0",  /* disable stream caching */
-            "--sout-display-delay=0" /* disable display caching */
+            "--network-caching=0", /* disable network caching */
+            "--live-caching=10",      /* disable live caching */
+            "--sout-mux-caching=10",  /* disable stream caching */
+            "--sout-display-delay=10", /* disable display caching */
+            "--ignore-config",
+            "--no-directx-3buffering",
+            "--clock-jitter=10",
+            "--clock-synchro=10",
+            "--intf=dummy",
+            "#transcode{vcodec=RV24}:smem{no-time-sync},",
+            "--high-priority",
+            "--screen-fps=20",
+            "--h264-fps=20"
         };
     const int vlc_argc = sizeof(vlc_argv) / sizeof(*vlc_argv);
     instance_ = VLC::Instance(vlc_argc, vlc_argv);
@@ -94,5 +104,6 @@ void VLC_Texture::update()
 {
     glBindTexture(GL_TEXTURE_2D, texture_id_);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, video_width_, video_height_, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels_.get());
+    glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, 0);
 }

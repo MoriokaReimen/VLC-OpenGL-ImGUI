@@ -8,10 +8,17 @@
  * @copyright Copyright (c) 2022
  * 
  */
+#include <glad/glad.h>
 
+#ifdef WIN32
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
+#else
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <imgui/backends/imgui_impl_opengl3.h>
+#endif
 #include <cstdio>
 #include <GLFW/glfw3.h>
 
@@ -41,6 +48,7 @@ int main(int, char**)
     if (!glfwInit())
         return 1;
 
+
     /* GL 3.0 + GLSL 130 */
     const char* glsl_version = "#version 130";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -55,6 +63,12 @@ int main(int, char**)
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
 
+#ifdef WIN32
+    if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
+        std::fprintf(stderr, "Failed to initialize OpenGL context\n");
+        return -1;
+    }
+#endif
     /* Setup Dear ImGui context */
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -71,7 +85,11 @@ int main(int, char**)
     ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.00f);
 
     /* Create VLC Texture Object */
+#ifdef WIN32
+    VLC_Texture vlc("dshow://");
+#else
     VLC_Texture vlc("v4l2:///dev/video0");
+#endif
 
     /* Main Loop */
     while (!glfwWindowShouldClose(window))
