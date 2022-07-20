@@ -8,9 +8,10 @@
  * @copyright Copyright (c) 2022
  * 
  */
-#include <glad/glad.h>
+
 
 #ifdef WIN32
+#include <glad/glad.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>

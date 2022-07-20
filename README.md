@@ -32,3 +32,4 @@ This app is created with help of these links.
 - https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
 - https://learnopengl.com/Getting-started/Textures
 - https://wiki.videolan.org/LibVLC_SampleCode_SDL/
+- https://wiki.videolan.org/VLC_command-line_help/

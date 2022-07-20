@@ -9,7 +9,6 @@
  * 
  */
 #include "vlc_texture.hpp"
-#include <glad/glad.h>
 #include <GL/gl.h>
 
 /**
@@ -34,12 +33,10 @@ VLC_Texture::VLC_Texture(const std::string &media_path, const unsigned int &widt
             "--sout-mux-caching=10",  /* disable stream caching */
             "--sout-display-delay=10", /* disable display caching */
             "--ignore-config",
-            "--no-directx-3buffering",
             "--clock-jitter=10",
             "--clock-synchro=10",
             "--intf=dummy",
             "#transcode{vcodec=RV24}:smem{no-time-sync},",
-            "--high-priority",
             "--screen-fps=20",
             "--h264-fps=20"
         };
@@ -104,6 +101,5 @@ void VLC_Texture::update()
 {
     glBindTexture(GL_TEXTURE_2D, texture_id_);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, video_width_, video_height_, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels_.get());
-    glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
